@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  database:
+    image: "postgres"
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: "Password2024"
+      POSTGRES_USER: "batahafAdmin"
+      POSTGRES_DB: "EventManagmentSystem"
+    ports:
+      - "5444:5432"

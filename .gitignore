@@ -1,0 +1,154 @@
+﻿# ═══════════════════════════════════════
+# Build Results
+# ═══════════════════════════════════════
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+[Bb]in/
+[Oo]bj/
+bld/
+artifacts/
+
+# ═══════════════════════════════════════
+# Visual Studio
+# ═══════════════════════════════════════
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.rsuser
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.opendb
+*.VC.db
+
+# ═══════════════════════════════════════
+# VS Code
+# ═══════════════════════════════════════
+.vscode/
+*.code-workspace
+
+# ═══════════════════════════════════════
+# Rider
+# ═══════════════════════════════════════
+.idea/
+*.sln.iml
+
+# ═══════════════════════════════════════
+# NuGet
+# ═══════════════════════════════════════
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+project.lock.json
+project.fragment.lock.json
+*.nuget.props
+*.nuget.targets
+
+# ═══════════════════════════════════════
+# Build Outputs
+# ═══════════════════════════════════════
+*.dll
+*.exe
+*.pdb
+
+# ═══════════════════════════════════════
+# Environment & Secrets ⚠️ IMPORTANT
+# ═══════════════════════════════════════
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Staging.json
+.env
+.env.*
+*.pfx
+*.p12
+secrets.json
+**/secrets/**
+
+# ═══════════════════════════════════════
+# Docker
+# ═══════════════════════════════════════
+docker-compose.override.yml
+
+# ═══════════════════════════════════════
+# Database
+# ═══════════════════════════════════════
+*.mdf
+*.ldf
+*.sqlite
+*.sqlite3
+*.db
+sql/
+app.db
+
+# ═══════════════════════════════════════
+# Logs
+# ═══════════════════════════════════════
+*.log
+logs/
+[Ll]ogs/
+
+# ═══════════════════════════════════════
+# Test Results
+# ═══════════════════════════════════════
+TestResults/
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+*.coveragexml
+coverage/
+
+# ═══════════════════════════════════════
+# ASP.NET
+# ═══════════════════════════════════════
+ScaffoldingReadMe.txt
+**/wwwroot/lib/
+
+# ═══════════════════════════════════════
+# Publish
+# ═══════════════════════════════════════
+**/publish/
+**/PublishProfiles/
+
+# ═══════════════════════════════════════
+# OS Files
+# ═══════════════════════════════════════
+
+# Mac
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+# ═══════════════════════════════════════
+# Misc
+# ═══════════════════════════════════════
+*.cache
+*.tmp
+*.temp
+temp/
+tmp/
+node_modules/

@@ -7,6 +7,6 @@ services:
     environment:
       POSTGRES_PASSWORD: "Password2024"
       POSTGRES_USER: "batahafAdmin"
-      POSTGRES_DB: "EventManagmentSystem"
+      POSTGRES_DB: "TestingProjectSetup"
     ports:
       - "5444:5432"

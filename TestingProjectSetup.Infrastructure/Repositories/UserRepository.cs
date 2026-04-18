@@ -35,9 +35,20 @@ public class UserRepository : Repository<ApplicationUser>, IUserRepository
         return result.Succeeded;
     }
 
+    public async Task<(bool Success, IEnumerable<IdentityError> Errors)> CreateUserWithResultAsync(ApplicationUser user, string password, CancellationToken cancellationToken = default)
+    {
+        var result = await _userManager.CreateAsync(user, password);
+        return (result.Succeeded, result.Errors);
+    }
+
     public async Task<bool> CheckPasswordAsync(ApplicationUser user, string password)
     {
         return await _userManager.CheckPasswordAsync(user, password);
+    }
+
+    public async Task<IList<string>> GetRolesAsync(ApplicationUser user)
+    {
+        return await _userManager.GetRolesAsync(user);
     }
 
     public async Task<ApplicationUser?> GetByTokenAsync(string token, CancellationToken cancellationToken = default)

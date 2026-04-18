@@ -1,16 +1,45 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using Serilog;
 using TestingProjectSetup.Api;
+using TestingProjectSetup.Api.Middleware;
 using TestingProjectSetup.Application;
 using TestingProjectSetup.Infrastructure;
 using TestingProjectSetup.Infrastructure.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add Api layer services 
+// Configure Serilog
+var loggerConfiguration = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration);
+
+var seqEnabled = builder.Configuration.GetValue<bool>("SeqSettings:Enabled");
+var seqUrl = builder.Configuration.GetValue<string>("SeqSettings:ServerUrl") ?? "http://localhost:5341";
+
+if (seqEnabled)
+{
+    loggerConfiguration.WriteTo.Seq(seqUrl);
+}
+
+Log.Logger = loggerConfiguration.CreateLogger();
+
+if (seqEnabled)
+{
+    Log.Information("Seq Logging is ENABLED at {SeqUrl}", seqUrl);
+}
+else
+{
+    Log.Warning("Seq Logging is DISABLED.");
+}
+
+Serilog.Debugging.SelfLog.Enable(msg => Console.WriteLine($"Serilog Error: {msg}"));
+
+builder.Host.UseSerilog();
+
+// Add Api layer services (includes Auth)
 builder.Services.AddApi(builder.Configuration);
 
-// Add Application layer services 
+// Add Application layer services
 builder.Services.AddApplication();
 
 // Add Infrastructure layer services
@@ -88,14 +117,18 @@ app.UseSwaggerUI(options =>
     options.RoutePrefix = "swagger";
 });
 
-// Global exception handling (early in pipeline to catch all downstream errors)
-app.UseMiddleware<TestingProjectSetup.Api.Middleware.ExceptionMiddleware>();
+// Custom Logging Middlewares (Order matters: CorrelationId first, then RequestResponseLogging)
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseMiddleware<RequestResponseLoggingMiddleware>();
 
-// Routing must run before CORS, Auth, and endpoints
-app.UseRouting();
+// Global exception handling (early in pipeline to catch all downstream errors)
+app.UseMiddleware<ExceptionMiddleware>();
 
 // CORS
 app.UseCors("AllowAll");
+
+// Routing must run before CORS, Auth, and endpoints
+app.UseRouting();
 
 if (!app.Environment.IsDevelopment())
 {

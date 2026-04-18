@@ -35,7 +35,16 @@ public class ExceptionMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled exception: {Message}", ex.Message);
+            var userId = context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "Anonymous";
+            var correlationId = context.Response.Headers["X-Correlation-ID"].ToString();
+
+            _logger.LogError(ex,
+                "Unhandled exception: {Message}. User: {UserId}, CorrelationId: {CorrelationId}, Path: {Path}",
+                ex.Message,
+                userId,
+                correlationId,
+                context.Request.Path);
+
             await HandleExceptionAsync(context, ex);
         }
     }
@@ -46,8 +55,7 @@ public class ExceptionMiddleware
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = (int)statusCode;
 
-        var result = Result.Failure(error);
-        var response = new ResultFailureResponse(result.IsSuccess, result.IsFailure, result.Error);
+        var response = new ApiResponse<object>(false, null, error);
         return context.Response.WriteAsync(JsonSerializer.Serialize(response, JsonOptions));
     }
 
@@ -57,7 +65,7 @@ public class ExceptionMiddleware
         {
             ValidationException validationEx => (
                 HttpStatusCode.BadRequest,
-                new Error(DomainErrors.General.ValidationError.Code, GetValidationMessage(validationEx))
+                DomainErrors.General.ValidationError with { Message = "One or more validation errors occurred.", Errors = GetValidationMessages(validationEx) }
             ),
             UnauthorizedAccessException => (
                 HttpStatusCode.Unauthorized,
@@ -69,11 +77,11 @@ public class ExceptionMiddleware
             ),
             ArgumentException argEx => (
                 HttpStatusCode.BadRequest,
-                new Error("General.ArgumentError", argEx.Message)
+                DomainErrors.General.ArgumentError with { Message = argEx.Message }
             ),
             InvalidOperationException opEx => (
                 HttpStatusCode.BadRequest,
-                new Error("General.InvalidOperation", opEx.Message)
+                DomainErrors.General.InvalidOperation with { Message = opEx.Message }
             ),
             _ => (
                 HttpStatusCode.InternalServerError,
@@ -82,20 +90,12 @@ public class ExceptionMiddleware
         };
     }
 
-    private static string GetValidationMessage(ValidationException validationEx)
+    private static List<string> GetValidationMessages(ValidationException validationEx)
     {
-        var messages = validationEx.Errors
+        return validationEx.Errors
             .Select(e => e.ErrorMessage)
             .Where(m => !string.IsNullOrWhiteSpace(m))
-            .Distinct();
-
-        return messages.Any()
-            ? string.Join(" ", messages)
-            : DomainErrors.General.ValidationError.Message;
+            .Distinct()
+            .ToList();
     }
-
-    /// <summary>
-    /// Response shape matching Result object (Failure case): IsSuccess, IsFailure, Error.
-    /// </summary>
-    private record ResultFailureResponse(bool IsSuccess, bool IsFailure, Error Error);
 }

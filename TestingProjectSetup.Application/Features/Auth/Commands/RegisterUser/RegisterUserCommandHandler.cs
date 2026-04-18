@@ -27,11 +27,20 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, R
 
     public async Task<Result<AuthResponse>> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
     {
+        var correlationId = Guid.NewGuid().ToString();
+
+        _logger.LogInformation(
+            "RegisterUser request started. Email: {Email}, CorrelationId: {CorrelationId}",
+            request.Email, correlationId);
+
         try
         {
             var existingUser = await _unitOfWork.Users.GetByEmailAsync(request.Email, cancellationToken);
             if (existingUser != null)
             {
+                _logger.LogWarning(
+                    "Registration failed: Email already exists. Email: {Email}, CorrelationId: {CorrelationId}",
+                    request.Email, correlationId);
                 return Result.Failure<AuthResponse>(DomainErrors.User.AlreadyExists);
             }
 
@@ -42,32 +51,56 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, R
                 Name = request.Name,
                 PhoneNumber = request.PhoneNumber,
                 EmailConfirmed = true,
-                CreatedAt = DateTime.UtcNow,
                 IsActive = true
             };
 
-            var success = await _unitOfWork.Users.CreateUserAsync(user, request.Password, cancellationToken);
+            var (success, errors) = await _unitOfWork.Users.CreateUserWithResultAsync(user, request.Password, cancellationToken);
 
             if (!success)
             {
-                return Result.Failure<AuthResponse>(DomainErrors.General.ServerError);
+                var errorMessages = errors.Select(e => e.Description).ToList();
+                _logger.LogWarning(
+                    "Registration failed: Identity error. Email: {Email}, Errors: {Errors}, CorrelationId: {CorrelationId}",
+                    request.Email, string.Join("; ", errorMessages), correlationId);
+                return Result.Failure<AuthResponse>(new Error("Validation.IdentityErrors", "One or more validation errors occurred.") { Errors = errorMessages });
             }
 
-            var token = _tokenService.GenerateToken(user);
+            var roles = await _unitOfWork.Users.GetRolesAsync(user);
+            var (token, expiresAt) = _tokenService.GenerateTokenWithExpiry(user, roles);
 
-            _logger.LogInformation("User {UserId} registered successfully", user.Id);
+            var refreshToken = _tokenService.GenerateRefreshToken();
+            var refreshTokenHash = _tokenService.HashToken(refreshToken);
+
+            await _unitOfWork.RefreshTokens.AddAsync(new Domain.Models.RefreshToken
+            {
+                UserId = user.Id,
+                TokenHash = refreshTokenHash,
+                ExpiresAt = DateTime.UtcNow.AddDays(_tokenService.RefreshTokenExpirationInDays),
+                User = null!
+            }, cancellationToken);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation(
+                "User {UserId} registered successfully. Email: {Email}, CorrelationId: {CorrelationId}",
+                user.Id, request.Email, correlationId);
 
             return Result.Success(new AuthResponse(
-                token,
-                user.Id,
-                user.Email!,
-                user.Name,
-                DateTime.UtcNow.AddHours(24)
+                Token: token,
+                RefreshToken: refreshToken,
+                UserId: user.Id,
+                Email: user.Email!,
+                Name: user.Name ?? "",
+                Role: roles.FirstOrDefault(),
+                ExpiresAt: expiresAt,
+                PhoneNumber: user.PhoneNumber
             ));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during user registration for {Email}", request.Email);
+            _logger.LogError(ex,
+                "Unhandled exception during user registration. Email: {Email}, CorrelationId: {CorrelationId}",
+                request.Email, correlationId);
             return Result.Failure<AuthResponse>(DomainErrors.General.ServerError);
         }
     }

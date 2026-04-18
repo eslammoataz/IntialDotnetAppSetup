@@ -8,6 +8,12 @@ namespace TestingProjectSetup.Application.Interfaces.Services;
 public interface ITokenService
 {
     string GenerateToken(ApplicationUser user);
+    (string Token, DateTime ExpiresAt) GenerateTokenWithExpiry(ApplicationUser user, IList<string> roles);
     Task<bool> ValidateTokenAsync(string token);
     string? GetUserIdFromToken(string token);
+
+    // Refresh token support
+    string GenerateRefreshToken();
+    string HashToken(string token);
+    int RefreshTokenExpirationInDays { get; }
 }
